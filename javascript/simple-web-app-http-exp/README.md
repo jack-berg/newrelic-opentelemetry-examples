@@ -1,4 +1,4 @@
-# OpenTelemetry-JS SDK New Relic Config - OTLP/HTTP (PROTO) Exporter
+# OpenTelemetry-JS Browser SDK with OTLP HTTP/JSON Exporter
 
 ## Introduction
 
