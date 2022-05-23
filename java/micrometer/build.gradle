@@ -19,5 +19,7 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-actuator'
   implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 
-  implementation 'com.newrelic.telemetry:micrometer-registry-new-relic:0.8.0'
+  implementation 'io.opentelemetry:opentelemetry-sdk'
+  implementation 'io.opentelemetry:opentelemetry-micrometer1-shim'
+  implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 }

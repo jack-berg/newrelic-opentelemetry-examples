@@ -1,13 +1,14 @@
 package com.newrelic.app;
 
-import com.newrelic.telemetry.Attributes;
-import com.newrelic.telemetry.micrometer.NewRelicRegistry;
-import com.newrelic.telemetry.micrometer.NewRelicRegistryConfig;
-import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.util.NamedThreadFactory;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Duration;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
+import io.opentelemetry.micrometer1shim.OpenTelemetryMeterRegistry;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.export.AggregationTemporalitySelector;
+import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
+import io.opentelemetry.sdk.resources.Resource;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -20,41 +21,32 @@ public class Application {
   }
 
   @Bean
-  public NewRelicRegistryConfig newRelicConfig() {
-    return new NewRelicRegistryConfig() {
-      @Override
-      public String get(String key) {
-        return null;
-      }
-
-      @Override
-      public String apiKey() {
-        return System.getenv("NEW_RELIC_API_KEY");
-      }
-
-      @Override
-      public Duration step() {
-        return Duration.ofSeconds(5);
-      }
-
-      @Override
-      public String serviceName() {
-        return "my-micrometer-service";
-      }
-    };
+  public OpenTelemetry openTelemetry() {
+    return OpenTelemetrySdk.builder()
+        .setMeterProvider(
+            SdkMeterProvider.builder()
+                .setResource(
+                    Resource.getDefault().toBuilder()
+                        .put("service.name", "my-micrometer-service-otel")
+                        // Include instrumentation.provider=micrometer to enable micrometer metrics
+                        // experience in New Relic
+                        .put("instrumentation.provider", "micrometer")
+                        .build())
+                .registerMetricReader(
+                    PeriodicMetricReader.builder(
+                            OtlpGrpcMetricExporter.builder()
+                                .setEndpoint("https://otlp.nr-data.net:4317")
+                                .addHeader("api-key", System.getenv("NEW_RELIC_API_KEY"))
+                                .setAggregationTemporalitySelector(
+                                    AggregationTemporalitySelector.deltaPreferred())
+                                .build())
+                        .build())
+                .build())
+        .build();
   }
 
   @Bean
-  public NewRelicRegistry newRelicMeterRegistry(NewRelicRegistryConfig config)
-      throws UnknownHostException {
-    NewRelicRegistry newRelicRegistry =
-        NewRelicRegistry.builder(config)
-            .commonAttributes(
-                new Attributes().put("host", InetAddress.getLocalHost().getHostName()))
-            .build();
-    newRelicRegistry.config().meterFilter(MeterFilter.ignoreTags("plz_ignore_me"));
-    newRelicRegistry.config().meterFilter(MeterFilter.denyNameStartsWith("jvm.threads"));
-    newRelicRegistry.start(new NamedThreadFactory("newrelic.micrometer.registry"));
-    return newRelicRegistry;
+  public MeterRegistry meterRegistry(OpenTelemetry openTelemetry) {
+    return OpenTelemetryMeterRegistry.builder(openTelemetry).build();
   }
 }
