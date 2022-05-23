@@ -1,0 +1,23 @@
+plugins {
+  id 'java-library'
+  id 'org.springframework.boot' version '2.6.7'
+  id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+}
+
+bootRun {
+  mainClass.set 'com.newrelic.app.Application'
+}
+
+configurations.all {
+  exclude module: 'spring-boot-starter-logging'
+}
+// Force upgrade to appease snyk
+ext['spring-framework.version'] = '5.3.20'
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+  implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+
+  implementation 'com.newrelic.telemetry:micrometer-registry-new-relic:0.8.0'
+}
