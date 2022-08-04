@@ -1,0 +1,19 @@
+plugins {
+  id 'java-library'
+  id 'application'
+}
+
+application {
+  mainClass.set 'com.newrelic.app.Application'
+}
+
+dependencies {
+  implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+
+  implementation 'io.opentelemetry:opentelemetry-sdk'
+  implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+  implementation 'io.opentelemetry:opentelemetry-exporter-otlp-logs'
+  implementation 'io.opentelemetry:opentelemetry-exporter-otlp-common'
+  implementation 'io.opentelemetry:opentelemetry-exporter-logging'
+  implementation 'io.opentelemetry:opentelemetry-semconv'
+}
