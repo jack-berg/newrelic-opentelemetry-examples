@@ -1,0 +1,36 @@
+{
+  "resourceSpans" : [ {
+    "resource" : {
+      "attributes" : [ {
+        "key" : "service.name",
+        "value" : {
+          "stringValue" : "otlp-json-example"
+        }
+      } ]
+    },
+    "scopeSpans" : [ {
+      "scope" : {
+        "name" : "my-instrumentation-scope"
+      },
+      "spans" : [ {
+        "traceId" : "88c9c4bcbc16afafbb086408a1bcfd28",
+        "spanId" : "4733c620a14341c4",
+        "parentSpanId" : "c3266a787b61c279",
+        "name" : "my-span",
+        "kind" : "SPAN_KIND_INTERNAL",
+        "startTimeUnixNano" : "1671468665000000000",
+        "endTimeUnixNano" : "1671468680000000000",
+        "attributes" : [ {
+          "key" : "key",
+          "value" : {
+            "stringValue" : "value"
+          }
+        } ],
+        "status" : {
+          "code" : "STATUS_CODE_OK",
+          "message" : "status message!"
+        }
+      } ]
+    } ]
+  } ]
+}
