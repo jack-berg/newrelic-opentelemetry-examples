@@ -17,6 +17,7 @@ dependencies {
   implementation 'io.opentelemetry:opentelemetry-sdk'
   implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
   implementation 'io.opentelemetry:opentelemetry-exporter-logging'
+  implementation 'io.opentelemetry:opentelemetry-exporter-logging-otlp'
   implementation 'io.opentelemetry:opentelemetry-semconv'
 
   implementation platform(SpringBootPlugin.BOM_COORDINATES)

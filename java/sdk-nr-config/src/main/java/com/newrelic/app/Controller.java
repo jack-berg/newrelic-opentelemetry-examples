@@ -30,12 +30,12 @@ public class Controller {
       var sleepTime = new Random().nextInt(200);
       Thread.sleep(sleepTime);
       MY_COUNTER.add(sleepTime, Attributes.of(AttributeKey.stringKey("method"), "ping"));
-      LOGGER.info("A sample log message!");
+      // LOGGER.info("A sample log message!");
 
       // Throw an exception ~25% of the time
-      if (new Random().nextInt(4) == 0) {
-        throw new IllegalStateException("Error!");
-      }
+      //      if (new Random().nextInt(4) == 0) {
+      //        throw new IllegalStateException("Error!");
+      //      }
 
       return "pong";
     } finally {
