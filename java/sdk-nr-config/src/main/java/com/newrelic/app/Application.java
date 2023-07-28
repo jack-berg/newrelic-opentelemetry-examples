@@ -111,7 +111,9 @@ public class Application {
     // Configure meter provider
     var sdkMeterProviderBuilder =
         SdkMeterProvider.builder()
-            .setResource(resource)
+            .setResource(Resource.empty()
+                .toBuilder().put("service.name", "my-app")
+                .build())
             .registerView(
                 InstrumentSelector.builder().setName("*").build(),
                 View.builder().setAggregation(Aggregation.drop()).build())
