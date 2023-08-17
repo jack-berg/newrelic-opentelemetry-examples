@@ -17,7 +17,13 @@ jar {
 }
 
 dependencies {
+  compileOnly 'io.opentelemetry:opentelemetry-api'
+  compileOnly 'io.opentelemetry:opentelemetry-api-events'
   compileOnly 'io.opentelemetry:opentelemetry-sdk-extension-autoconfigure'
+  compileOnly 'io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi'
+  compileOnly 'io.opentelemetry.javaagent:opentelemetry-javaagent-bootstrap:1.28.0-alpha'
+  compileOnly 'io.opentelemetry.javaagent:opentelemetry-javaagent-extension-api:1.28.0-alpha'
+  compileOnly 'io.opentelemetry.javaagent:opentelemetry-javaagent-tooling:1.28.0-alpha'
   compileOnly 'io.opentelemetry:opentelemetry-semconv'
 
   implementation "io.opentelemetry.contrib:opentelemetry-samplers:1.28.0-alpha"
