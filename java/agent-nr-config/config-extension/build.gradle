@@ -27,4 +27,6 @@ dependencies {
   compileOnly 'io.opentelemetry:opentelemetry-semconv'
 
   implementation "io.opentelemetry.contrib:opentelemetry-samplers:1.28.0-alpha"
+
+  implementation group: 'com.google.guava', name: 'guava', version: '32.1.2-jre'
 }

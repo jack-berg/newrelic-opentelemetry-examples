@@ -1,11 +1,12 @@
 package com.newrelic.otel.extension;
 
+import com.google.common.util.concurrent.RateLimiter;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.events.EventEmitter;
 import io.opentelemetry.api.events.GlobalEventEmitterProvider;
-import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
@@ -15,94 +16,97 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class JarAnalyzer {
 
-    private static JarAnalyzer INSTANCE = new JarAnalyzer();
+  static final Logger JAR_ANALYZER_LOGGER = Logger.getLogger(JarAnalyzer.class.getName());
 
-    private static final String jarExtension = ".jar";
+  private static final JarAnalyzer INSTANCE = new JarAnalyzer();
 
-    private final Set<String> seenPaths = new HashSet<>();
-    private final BlockingQueue<URL> toProcess = new LinkedBlockingDeque<>();
-    private final AtomicBoolean isStarted = new AtomicBoolean(false);
-    private EventEmitter eventEmitter;
+  static final String JAR_EXTENSION = ".jar";
 
-    private JarAnalyzer() {
+  private final Set<URI> seenUris = new HashSet<>();
+  private final BlockingQueue<URL> toProcess = new LinkedBlockingDeque<>();
+  private final AtomicBoolean isStarted = new AtomicBoolean(false);
+  private EventEmitter eventEmitter;
+
+  private JarAnalyzer() {}
+
+  public static JarAnalyzer getInstance() {
+    return INSTANCE;
+  }
+
+  public void start(OpenTelemetry openTelemetry) {
+    if (isStarted.compareAndSet(false, true)) {
+      eventEmitter =
+          GlobalEventEmitterProvider.get()
+              .eventEmitterBuilder("event-emitter")
+              .setEventDomain("event-domain")
+              .build();
+      Thread thread = new Thread(INSTANCE::processUrls);
+      thread.setDaemon(true);
+      thread.start();
+    }
+  }
+
+  void handle(ProtectionDomain protectionDomain) {
+    if (protectionDomain == null) {
+      return;
+    }
+    CodeSource codeSource = protectionDomain.getCodeSource();
+    if (codeSource == null) {
+      return;
+    }
+    URL location = codeSource.getLocation();
+    if (location == null) {
+      return;
+    }
+    URI locationUri;
+    try {
+      locationUri = location.toURI();
+    } catch (URISyntaxException e) {
+      JAR_ANALYZER_LOGGER.log(Level.WARNING, "Unable to get uri for url: " + location, e);
+      return;
     }
 
-    public static JarAnalyzer getInstance() {
-        return INSTANCE;
+    if (!seenUris.add(locationUri)) {
+      return;
     }
 
-    public void start(OpenTelemetry openTelemetry) {
-        if (isStarted.compareAndSet(false, true)) {
-            eventEmitter = GlobalEventEmitterProvider.get().eventEmitterBuilder("event-emitter").setEventDomain("event-domain").build();
-            System.out.println("start");
-            System.out.println(eventEmitter);
-            Thread thread = new Thread(INSTANCE::processUrls);
-            thread.setDaemon(true);
-            thread.start();
-        }
+    if ("jrt".equals(location.getProtocol())) {
+      JAR_ANALYZER_LOGGER.log(Level.WARNING, "Skipping java runtime module: " + location);
+      return;
+    }
+    if (!location.getFile().endsWith(JAR_EXTENSION)) {
+      JAR_ANALYZER_LOGGER.log(Level.WARNING, "Skipping unrecognized code location: " + location);
+      return;
     }
 
-    void handle(ProtectionDomain protectionDomain) {
-        if (protectionDomain != null) {
-            CodeSource codeSource = protectionDomain.getCodeSource();
-            if (codeSource != null) {
-                URL location = codeSource.getLocation();
-                if (location != null) {
-                    try {
-                        if (location.getProtocol().equals("jar")) {
-                            // addJarProtocolURL
-                            String path = location.getFile();
-                            int index = path.lastIndexOf(jarExtension);
-                            if (index > 0) {
-                                path = path.substring(0, index + jarExtension.length());
-                            }
-                            if (seenPaths.add(path)) {
-                                toProcess.add(new URL(path));
-                            }
-                        } else if (location.getFile().endsWith(jarExtension)) {
-                            // addURLEndingWithJar
-                            if (seenPaths.add(location.getFile())) {
-                                toProcess.add(location);
-                            }
-                        } else {
-                            // addOtherURL
-                            String path = location.getFile();
-                            int index = path.lastIndexOf(jarExtension);
-                            if (index > 0) {
-                                path = path.substring(0, index + jarExtension.length());
-                            }
-                            if (seenPaths.add(path)) {
-                                toProcess.add(new URL(location.getProtocol(), location.getHost(), path));
-                            }
-                        }
-                    } catch (MalformedURLException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
+    toProcess.add(location);
+  }
 
-    private void processUrls() {
-        while (!Thread.currentThread().isInterrupted()) {
-            try {
-                URL urlToProcess = toProcess.poll(100, TimeUnit.MILLISECONDS);
-                if (urlToProcess == null) {
-                    continue;
-                }
-                JarInfo jarInfo = JarInfo.create(urlToProcess);
-                System.out.println("url: " + urlToProcess + System.lineSeparator() + "jarInfo: " + jarInfo + System.lineSeparator());
+  private void processUrls() {
+    RateLimiter rateLimiter = RateLimiter.create(10);
 
-                AttributesBuilder builder = Attributes.builder();
-                builder.put("jar.version", jarInfo.getVersion());
-                jarInfo.getAttributes().forEach((key, value) -> builder.put("jar." + key, value));
-                eventEmitter.emit("JarAnalyzed", builder.build());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    while (!Thread.currentThread().isInterrupted()) {
+      URL url = null;
+      try {
+        url = toProcess.poll(100, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      if (url == null) {
+        continue;
+      }
+      rateLimiter.acquire();
+      try {
+        Attributes jarAttributes = JarUtil.toJarAttributes(url);
+        eventEmitter.emit("dependency-detected", jarAttributes);
+      } catch (Exception e) {
+        JAR_ANALYZER_LOGGER.log(Level.WARNING, "Error processing jar url: " + url);
+      }
     }
+  }
 }
