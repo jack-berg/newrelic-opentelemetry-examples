@@ -43,7 +43,7 @@ public class JarAnalyzer {
       eventEmitter =
           GlobalEventEmitterProvider.get()
               .eventEmitterBuilder("event-emitter")
-              .setEventDomain("event-domain")
+              .setEventDomain("package")
               .build();
       Thread thread = new Thread(INSTANCE::processUrls);
       thread.setDaemon(true);
@@ -103,7 +103,7 @@ public class JarAnalyzer {
       rateLimiter.acquire();
       try {
         Attributes jarAttributes = JarUtil.toJarAttributes(url);
-        eventEmitter.emit("dependency-detected", jarAttributes);
+        eventEmitter.emit("info", jarAttributes);
       } catch (Exception e) {
         JAR_ANALYZER_LOGGER.log(Level.WARNING, "Error processing jar url: " + url);
       }

@@ -21,31 +21,28 @@ import java.util.logging.Level;
 
 final class JarUtil {
 
-  private static final AttributeKey<String> SHA_1 = AttributeKey.stringKey("jvm.jar.sha_1");
-  private static final AttributeKey<String> SHA_512 = AttributeKey.stringKey("jvm.jar.sha_512");
-  private static final AttributeKey<String> JAR_NAME = AttributeKey.stringKey("jvm.jar.name");
-  private static final AttributeKey<String> IMPLEMENTATION_VENDOR =
-      AttributeKey.stringKey("jvm.jar.implementation_vendor");
+  private static final AttributeKey<String> PACKAGE_NAME = AttributeKey.stringKey("package.name");
+  private static final AttributeKey<String> PACKAGE_VERSION = AttributeKey.stringKey("package.version");
+  private static final AttributeKey<String> PACKAGE_TYPE = AttributeKey.stringKey("package.type");
+  private static final AttributeKey<String> PACKAGE_DESCRIPTION = AttributeKey.stringKey("package.description");
+  private static final AttributeKey<String> PACKAGE_CHECKSUM = AttributeKey.stringKey("package.checksum");
+  private static final AttributeKey<String> PACKAGE_PATH = AttributeKey.stringKey("package.path");
 
   static Attributes toJarAttributes(URL url) {
     AttributesBuilder builder = Attributes.builder();
 
+    builder.put(PACKAGE_TYPE, "jar");
+
     try {
-      builder.put(SHA_1, computeSha1(url));
+      builder.put(PACKAGE_CHECKSUM, computeSha1(url));
     } catch (IOException e) {
       JAR_ANALYZER_LOGGER.log(Level.WARNING, "Error computing SHA-1 for url: " + url, e);
     }
 
     try {
-      builder.put(JAR_NAME, jarName(url));
+      builder.put(PACKAGE_PATH, jarName(url));
     } catch (Exception e) {
       JAR_ANALYZER_LOGGER.log(Level.WARNING, "Error determining jar name for url: " + url, e);
-    }
-
-    try {
-      builder.put(SHA_512, computeSha512(url));
-    } catch (IOException e) {
-      JAR_ANALYZER_LOGGER.log(Level.WARNING, "Error computing SHA-512 for url: " + url, e);
     }
 
     try {
@@ -120,9 +117,9 @@ final class JarUtil {
       }
 
       java.util.jar.Attributes mainAttributes = manifest.getMainAttributes();
-      builder.put(
-          IMPLEMENTATION_VENDOR,
-          mainAttributes.getValue(java.util.jar.Attributes.Name.IMPLEMENTATION_VENDOR));
+      String name = mainAttributes.getValue(java.util.jar.Attributes.Name.IMPLEMENTATION_TITLE);
+      String description = mainAttributes.getValue(java.util.jar.Attributes.Name.IMPLEMENTATION_VENDOR);
+      builder.put(PACKAGE_DESCRIPTION, name + ((description != null && !description.isEmpty()) ? " by " + description : ""));
     }
   }
 
@@ -148,9 +145,14 @@ final class JarUtil {
     if (pom == null) {
       return;
     }
-    for (Object key : pom.keySet()) {
-      String strKey = (String) key;
-      builder.put("jvm.jar.pom." + strKey, pom.getProperty(strKey));
+    String groupId = pom.getProperty("groupId");
+    String artifactId = pom.getProperty("artifactId");
+    if (groupId != null && !groupId.isEmpty() && artifactId != null && !artifactId.isEmpty()) {
+      builder.put(PACKAGE_NAME, groupId + ":" + artifactId);
+    }
+    String version = pom.getProperty("version");
+    if (version != null && !version.isEmpty()) {
+      builder.put(PACKAGE_VERSION, version);
     }
   }
 
