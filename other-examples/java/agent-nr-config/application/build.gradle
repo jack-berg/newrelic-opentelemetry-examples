@@ -8,22 +8,8 @@ plugins {
 
 def agentPath = project.buildDir.toString() + "/otel/opentelemetry-javaagent.jar"
 
-bootRun {
-  mainClass.set 'com.newrelic.app.Application'
-
-  // Before running, build the config-extension shadow jar
-  dependsOn(":agent-nr-config:config-extension:shadowJar")
-  // Before running, download the opentelemetry-java-instrumentation agent
-  dependsOn("downloadAgent")
-
-  def extensionPath = project(":agent-nr-config:config-extension").buildDir.toString() + "/libs/config-extension.jar"
-
-  jvmArgs = [
-      // Set the opentelemetry-java-instrumentation agent as the javaagent
-      "-javaagent:${agentPath}",
-      // Use the config-extension shadowJar to configure the agent via SPI
-      "-Dotel.javaagent.extensions=${extensionPath}"
-  ]
+configurations {
+  newrelicExtension
 }
 
 // Download the opentelemetry java agent and put it in the build directory
@@ -44,4 +30,27 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-log4j2'
   implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+  newrelicExtension group: 'com.newrelic.agent.java', name: 'newrelic-opentelemetry-agent-extension', version: '8.8.0-alpha-SNAPSHOT'
+
+  implementation group: 'com.newrelic.agent.java', name: 'newrelic-api', version: '8.7.0'
+}
+
+bootRun {
+  mainClass.set 'com.newrelic.app.Application'
+
+  // Before running, build the config-extension shadow jar
+  dependsOn(":agent-nr-config:config-extension:shadowJar")
+  // Before running, download the opentelemetry-java-instrumentation agent
+  dependsOn("downloadAgent")
+
+  def extensionPath = project(":agent-nr-config:config-extension").buildDir.toString() + "/libs/config-extension.jar"
+
+  jvmArgs = [
+      // Set the opentelemetry-java-instrumentation agent as the javaagent
+      "-javaagent:${agentPath}",
+      "-Dotel.javaagent.logging=application",
+      // Use the config-extension shadowJar to configure the agent via SPI
+      "-Dotel.javaagent.extensions=${extensionPath},${configurations.newrelicExtension.singleFile}"
+  ]
 }
