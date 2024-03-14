@@ -32,8 +32,8 @@ dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
   // TODO: stop using SNAPSHOT versions after initial publication
-  newrelicExtension group: 'com.newrelic.agent.java', name: 'newrelic-opentelemetry-agent-extension', version: '8.8.0-alpha-SNAPSHOT'
-  implementation group: 'com.newrelic.agent.java', name: 'newrelic-api', version: '8.8.0-SNAPSHOT'
+  newrelicExtension group: 'com.newrelic.agent.java', name: 'newrelic-opentelemetry-agent-extension', version: '8.9.1-alpha'
+  implementation group: 'com.newrelic.agent.java', name: 'newrelic-api', version: '8.9.1'
 }
 
 bootRun {
