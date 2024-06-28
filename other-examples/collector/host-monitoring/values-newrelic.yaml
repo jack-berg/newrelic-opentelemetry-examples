@@ -1,0 +1,15 @@
+# https://github.com/newrelic/nri-kubernetes/blob/main/charts/newrelic-infrastructure/values.yaml
+prometheus:
+  # Automatically scrape prometheus metrics for annotated services in the cluster
+  # Collecting prometheus metrics for large clusters might impact data usage significantly
+  enabled: false
+  lowDataMode: true  # Skip ingesting cluster-level metrics
+kubeEvents:
+  # Report Kubernetes events
+  enabled: false
+ksm:
+  # Deploy kube-state-metrics in the cluster.
+  # Set this to true unless it is already deployed.
+  enabled: false
+privileged: true
+enableProcessMetrics: true

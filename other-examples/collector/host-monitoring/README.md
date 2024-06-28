@@ -61,3 +61,57 @@ See [get started with querying](https://docs.newrelic.com/docs/query-your-data/e
 This example deploys the collector as a kubernetes DaemonSet to run a collector instance on each node in the kubernetes cluster. When running in this type of configuration, it's common to route application telemetry from pods to the collector instance each pod is respectively running on, and to enrich that telemetry with additional metadata via the [kubernetes attributes processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/k8sattributesprocessor). This example omits that configuration for brevity. See [important components for kubernetes](https://opentelemetry.io/docs/kubernetes/collector/components/#filelog-receiver) for common configuration running the collector in kubernetes.
 
 In order to demonstrate correlation between OpenTelemetry APM entities and host entities, this example deploys an instance of the opentelemetry demo [AdService](https://opentelemetry.io/docs/demo/services/ad/), defined in [adservice.yaml](./k8s/adservice.yaml). The AdService application is configured to export OTLP data to the collector DaemonSet pod running on the same host. The collector enriches the AdService telemetry with `host.id` (and other attributes) which New Relic uses to create a relationship with the host entity.
+
+## Queries
+
+Host metrics receiver cumulative vs. delta byte rate:
+```
+FROM Metric SELECT rate(bytecountestimate(), 1 minute)/1e6 WHERE otel.library.name like 'otelcol/hostmetricsreceiver/%' and metricName not like 'process%' and host.id in ('docker-desktop-cumulative', 'docker-desktop-delta') TIMESERIES FACET host.id
+```
+
+Note: `process%` metrics are excluded for apples-to-apples experience because NRI doesn't produce process metrics on local machine.
+
+NRI byte rate:
+```
+FROM SystemSample, NetworkSample, StorageSample, ProcessSample SELECT rate(bytecountestimate(), 1 minute) WHERE hostname = 'docker-desktop' TIMESERIES 
+```
+
+Permalink comparing NRI vs. host metric byte rate: https://onenr.io/0qwyEVz4xwn
+
+Host metric receiver metrics by name and type:
+```
+FROM Metric SELECT count(*) WHERE otel.library.name like 'otelcol/hostmetricsreceiver/%' and host.id in ('docker-desktop-cumulative', 'docker-desktop-delta') FACET host.id, metricName, getField(%, type) limit max
+```
+
+## Payloads
+
+Example host metric payload.
+
+Total chars: 669
+Entity chars: 133 (~20%)
+
+```
+{
+"description": "Average CPU Load over 15 minutes.",
+"entity.guid": "Mjk2NzA1MnxJTkZSQXxOQXw0ODYxODgzNzc0NzU1NDM3OTU1",
+"entity.name": "docker-desktop-cumulative",
+"entity.type": "HOST",
+"host.id": "docker-desktop-cumulative",
+"host.name": "docker-desktop-cumulative",
+"instrumentation.provider": "opentelemetry",
+"metricName": "system.cpu.load_average.15m",
+"newrelic.source": "api.metrics.otlp",
+"otel.library.name": "otelcol/hostmetricsreceiver/load",
+"otel.library.version": "0.98.0",
+"system.cpu.load_average.15m": {
+  "type": "gauge",
+  "count": 1,
+  "sum": 0.56,
+  "min": 0.56,
+  "max": 0.56,
+  "latest": 0.56
+},
+"timestamp": 1719591825373,
+"unit": "{thread}"
+}
+```

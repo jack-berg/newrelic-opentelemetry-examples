@@ -12,7 +12,7 @@ data:
     receivers:
       hostmetrics:
         root_path: /hostfs
-        collection_interval: 20s
+        collection_interval: 1m
         scrapers:
           cpu:
             metrics:
@@ -70,6 +70,24 @@ data:
     processors:
       batch:
     
+      resource/cumulative:
+        attributes:
+        - key: host.id
+          value: ${NODE_NAME}-cumulative
+          action: upsert
+        - key: host.name
+          value: ${NODE_NAME}-cumulative
+          action: upsert
+    
+      resource/delta:
+        attributes:
+        - key: host.id
+          value: ${NODE_NAME}-delta
+          action: upsert
+        - key: host.name
+          value: ${NODE_NAME}-delta
+          action: upsert
+    
       resourcedetection:
         detectors: ["env", "system"]
         system:
@@ -82,6 +100,8 @@ data:
         detectors: ["gcp", "ec2", "azure"]
         timeout: 2s
         override: false
+      
+      cumulativetodelta:
 
     exporters:
       logging:
@@ -93,10 +113,14 @@ data:
 
     service:
       pipelines:
-        metrics/host:
+        metrics/hostcumulative:
           receivers: [hostmetrics]
-          processors: [resourcedetection, resourcedetection/cloud, batch]
+          processors: [resource/cumulative, batch]
           exporters: [otlphttp]
+        metrics/hostdelta:
+          receivers: [hostmetrics]
+          processors: [resource/delta, cumulativetodelta, batch]
+          exporters: [otlphttp/prod]
         logs/host:
           receivers: [filelog]
           processors: [resourcedetection, resourcedetection/cloud, batch]
