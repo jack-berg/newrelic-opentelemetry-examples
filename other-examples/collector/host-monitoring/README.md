@@ -93,6 +93,7 @@ Example host metric payload.
 
 Total chars: 669
 Entity chars: 133 (~20%)
+Description chars: 52 (~7.5%)
 
 ```
 {
