@@ -38,18 +38,18 @@ data:
             metrics:
               system.paging.utilization:
                 enabled: true
-          processes:
-          process:
-            metrics:
-              process.cpu.utilization:
-                enabled: true
-              process.cpu.time:
-                enabled: false
+          # processes:
+          # process:
+          #   metrics:
+          #     process.cpu.utilization:
+          #       enabled: true
+          #     process.cpu.time:
+          #       enabled: false
             # Mute various errors reading process metrics running locally in docker.
             # Delete for production deployments.
-            mute_process_exe_error: true
-            mute_process_user_error: true
-            mute_process_io_error: true
+          #   mute_process_exe_error: true
+          #   mute_process_user_error: true
+          #   mute_process_io_error: true
     
       filelog:
         include:
@@ -106,6 +106,16 @@ data:
     exporters:
       logging:
         verbosity: detailed
+      otlphttp/cumulative:
+        endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
+        headers:
+          api-key: ${NEW_RELIC_API_KEY}
+          User-Agent: JackHostMonitoringTest/cumulative
+      otlphttp/delta:
+        endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
+        headers:
+          api-key: ${NEW_RELIC_API_KEY}
+          User-Agent: JackHostMonitoringTest/delta
       otlphttp:
         endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
         headers:
@@ -116,11 +126,11 @@ data:
         metrics/hostcumulative:
           receivers: [hostmetrics]
           processors: [resource/cumulative, batch]
-          exporters: [otlphttp]
+          exporters: [otlphttp/cumulative]
         metrics/hostdelta:
           receivers: [hostmetrics]
           processors: [resource/delta, cumulativetodelta, batch]
-          exporters: [otlphttp/prod]
+          exporters: [otlphttp/delta]
         logs/host:
           receivers: [filelog]
           processors: [resourcedetection, resourcedetection/cloud, batch]

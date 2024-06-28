@@ -83,6 +83,10 @@ Host metric receiver metrics by name and type:
 FROM Metric SELECT count(*) WHERE otel.library.name like 'otelcol/hostmetricsreceiver/%' and host.id in ('docker-desktop-cumulative', 'docker-desktop-delta') FACET host.id, metricName, getField(%, type) limit max
 ```
 
+NOTE: bytecountestimate() does not account for common block discount. 
+
+TDP usage comparison of hostmetric cumulative vs hostmetric delta vs NRI (no process metrics): https://onenr.io/0LRE9v2O9Ra
+
 ## Payloads
 
 Example host metric payload.
