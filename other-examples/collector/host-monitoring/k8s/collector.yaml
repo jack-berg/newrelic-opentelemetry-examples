@@ -10,7 +10,47 @@ metadata:
 data:
   collector-config: |
     receivers:
-      hostmetrics:
+      hostmetrics/original:
+        root_path: /hostfs
+        collection_interval: 20s
+        scrapers:
+          cpu:
+            metrics:
+              system.cpu.utilization:
+                enabled: true
+          load:
+          memory:
+            metrics:
+              system.memory.utilization:
+                enabled: true
+          disk:
+          filesystem:
+            metrics:
+              system.filesystem.utilization:
+                enabled: true
+            # Reading /containers/services causes error running in docker.
+            # Delete for production deployments.
+            exclude_mount_points:
+              mount_points: ["/containers/services"]
+              match_type: strict
+          network:
+          paging:
+            metrics:
+              system.paging.utilization:
+                enabled: true
+          processes:
+          process:
+            metrics:
+              process.cpu.utilization:
+                enabled: true
+              process.cpu.time:
+                enabled: false
+            # Mute various errors reading process metrics running locally in docker.
+            # Delete for production deployments.
+            mute_process_exe_error: true
+            mute_process_user_error: true
+            mute_process_io_error: true
+      hostmetrics/new:
         root_path: /hostfs
         collection_interval: 1m
         scrapers:
@@ -68,24 +108,30 @@ data:
           grpc:
     
     processors:
+      transform:
+        metric_statements:
+          - context: metric
+            statements:
+              - set(description, "")
+              - set(unit, "")
       batch:
     
-      resource/cumulative:
+      resource/original:
         attributes:
         - key: host.id
-          value: ${NODE_NAME}-cumulative
+          value: ${NODE_NAME}-original
           action: upsert
         - key: host.name
-          value: ${NODE_NAME}-cumulative
+          value: ${NODE_NAME}-original
           action: upsert
     
-      resource/delta:
+      resource/new:
         attributes:
         - key: host.id
-          value: ${NODE_NAME}-delta
+          value: ${NODE_NAME}-new
           action: upsert
         - key: host.name
-          value: ${NODE_NAME}-delta
+          value: ${NODE_NAME}-new
           action: upsert
     
       resourcedetection:
@@ -106,16 +152,16 @@ data:
     exporters:
       logging:
         verbosity: detailed
-      otlphttp/cumulative:
+      otlphttp/original:
         endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
         headers:
           api-key: ${NEW_RELIC_API_KEY}
-          User-Agent: JackHostMonitoringTest/cumulative
-      otlphttp/delta:
+          User-Agent: JackHostMonitoringTest/original
+      otlphttp/new:
         endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
         headers:
           api-key: ${NEW_RELIC_API_KEY}
-          User-Agent: JackHostMonitoringTest/delta
+          User-Agent: JackHostMonitoringTest/new
       otlphttp:
         endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
         headers:
@@ -123,14 +169,14 @@ data:
 
     service:
       pipelines:
-        metrics/hostcumulative:
-          receivers: [hostmetrics]
-          processors: [resource/cumulative, batch]
-          exporters: [otlphttp/cumulative]
-        metrics/hostdelta:
-          receivers: [hostmetrics]
-          processors: [resource/delta, cumulativetodelta, batch]
-          exporters: [otlphttp/delta]
+        metrics/hostoriginal:
+          receivers: [hostmetrics/original]
+          processors: [resource/original, batch]
+          exporters: [otlphttp/original]
+        metrics/hostnew:
+          receivers: [hostmetrics/new]
+          processors: [resource/new, transform, cumulativetodelta, batch]
+          exporters: [otlphttp/new, logging]
         logs/host:
           receivers: [filelog]
           processors: [resourcedetection, resourcedetection/cloud, batch]
