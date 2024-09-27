@@ -1,0 +1,125 @@
+# sdk-config.yaml is a typical starting point for configuring the SDK, including exporting to
+# localhost via OTLP.
+
+# NOTE: With the exception of env var substitution syntax (i.e. ${MY_ENV}), SDKs ignore
+# environment variables when interpreting config files. This including ignoring all env
+# vars defined in https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/.
+
+# The file format version
+file_format: "0.1"
+
+# Configure if the SDK is disabled or not.
+disabled: false
+
+# Configure resource for all signals.
+resource:
+  # Configure resource attributes.
+  attributes:
+    # Configure `service.name` resource attribute
+    - name: service.name
+      value: agent-nr-config
+  detectors:
+    # Configure attributes provided by resource detectors.
+    attributes:
+      excluded:
+        - process.command_line
+        - process.command_args
+
+# Configure general attribute limits. See also tracer_provider.limits, logger_provider.limits.
+attribute_limits:
+  # Configure max attribute value size.
+  attribute_value_length_limit: 4095
+
+# Configure text map context propagators.
+propagator:
+  composite: [tracecontext, baggage]
+
+# Configure tracer provider.
+tracer_provider:
+  # Configure span processors.
+  processors:
+    # Configure a batch span processor.
+    - batch:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be OTLP.
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: https://otlp.nr-data.net/v1/traces
+            # Configure compression.
+            compression: gzip
+            # Configure headers:
+            headers:
+              - name: api-key
+                value: ${NEW_RELIC_API_KEY}
+  # Configure the sampler.
+  sampler:
+    parent_based:
+      # Configure the parent_based sampler's root sampler to be rule_based_routing sampler.
+      root:
+        rule_based_routing:
+          # Fallback to the always_on sampler if the criteria is not met.
+          fallback_sampler:
+            always_on:
+          # Only apply to SERVER spans.
+          span_kind: SERVER
+          rules:
+            # Drop spans where url.path matches the regex /actuator.* (i.e. spring boot actuator endpoints).
+            - action: DROP
+              attribute: url.path
+              pattern: /actuator.*
+
+# Configure meter provider.
+meter_provider:
+  # Configure metric readers.
+  readers:
+    # Configure a periodic metric reader.
+    - periodic:
+        interval: 5000
+        # Configure exporter.
+        exporter:
+          console:
+          # Configure exporter to be OTLP.
+#          otlp:
+#            # Configure protocol.
+#            protocol: http/protobuf
+#            # Configure endpoint.
+#            endpoint: https://otlp.nr-data.net/v1/metrics
+#            # Configure compression.
+#            compression: gzip
+#            # Configure headers:
+#            headers:
+#              - name: api-key
+#                value: ${NEW_RELIC_API_KEY}
+#            # Configure temporality preference.
+#            temporality_preference: delta
+#            # Configure default histogram aggregation.
+#            default_histogram_aggregation: base2_exponential_bucket_histogram
+
+# Configure logger provider.
+logger_provider:
+  # Configure log record processors.
+  processors:
+    # Configure a batch log record processor.
+    - batch:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be OTLP.
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: https://otlp.nr-data.net/v1/logs
+            # Configure compression.
+            compression: gzip
+            # Configure headers:
+            headers:
+              - name: api-key
+                value: ${NEW_RELIC_API_KEY}
+
+instrumentation:
+  java:
+    runtime-telemetry:
+      enabled: true

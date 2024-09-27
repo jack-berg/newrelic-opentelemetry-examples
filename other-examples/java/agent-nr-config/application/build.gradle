@@ -11,6 +11,7 @@ configurations.all {
 
 configurations {
   agent
+  sampler
 }
 
 dependencies {
@@ -18,6 +19,7 @@ dependencies {
 
   agent(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${project.property('otelInstrumentationVersion')}"))
   agent("io.opentelemetry.javaagent:opentelemetry-javaagent")
+  sampler("io.opentelemetry.contrib:opentelemetry-samplers:1.39.0-alpha")
 
   implementation platform(SpringBootPlugin.BOM_COORDINATES)
   implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -40,13 +42,19 @@ bootRun {
   dependsOn("copyAgent")
 
   def extensionPath = project(":agent-nr-config:config-extension").buildDir.toString() + "/libs/config-extension.jar"
+  def samplersPath = configurations.sampler.getFiles().stream()
+      .filter(file -> file.toString().contains("opentelemetry-samplers-1.39.0-alpha.jar"))
+      .findFirst()
+      .orElse(null);
 
   def agentPath = project.buildDir.toString() + "/agent/opentelemetry-javaagent.jar"
 
   jvmArgs = [
       // Set the opentelemetry-java-instrumentation agent as the javaagent
       "-javaagent:${agentPath}",
+      "-Dotel.javaagent.debug=true",
+      "-Dotel.experimental.config.file=/Users/jberg/code/newrelic/newrelic-opentelemetry-examples/other-examples/java/agent-nr-config/sdk-config.yaml",
       // Use the config-extension shadowJar to configure the agent via SPI
-      "-Dotel.javaagent.extensions=${extensionPath}"
+      "-Dotel.javaagent.extensions=${extensionPath},${samplersPath}"
   ]
 }
