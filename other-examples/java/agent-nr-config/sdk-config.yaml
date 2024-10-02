@@ -80,23 +80,22 @@ meter_provider:
         interval: 5000
         # Configure exporter.
         exporter:
-          console:
           # Configure exporter to be OTLP.
-#          otlp:
-#            # Configure protocol.
-#            protocol: http/protobuf
-#            # Configure endpoint.
-#            endpoint: https://otlp.nr-data.net/v1/metrics
-#            # Configure compression.
-#            compression: gzip
-#            # Configure headers:
-#            headers:
-#              - name: api-key
-#                value: ${NEW_RELIC_API_KEY}
-#            # Configure temporality preference.
-#            temporality_preference: delta
-#            # Configure default histogram aggregation.
-#            default_histogram_aggregation: base2_exponential_bucket_histogram
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: https://otlp.nr-data.net/v1/metrics
+            # Configure compression.
+            compression: gzip
+            # Configure headers:
+            headers:
+              - name: api-key
+                value: ${NEW_RELIC_API_KEY}
+            # Configure temporality preference.
+            temporality_preference: delta
+            # Configure default histogram aggregation.
+            default_histogram_aggregation: base2_exponential_bucket_histogram
 
 # Configure logger provider.
 logger_provider:

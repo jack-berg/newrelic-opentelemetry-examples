@@ -52,7 +52,7 @@ bootRun {
   jvmArgs = [
       // Set the opentelemetry-java-instrumentation agent as the javaagent
       "-javaagent:${agentPath}",
-      "-Dotel.javaagent.debug=true",
+      // "-Dotel.javaagent.debug=true",
       "-Dotel.experimental.config.file=/Users/jberg/code/newrelic/newrelic-opentelemetry-examples/other-examples/java/agent-nr-config/sdk-config.yaml",
       // Use the config-extension shadowJar to configure the agent via SPI
       "-Dotel.javaagent.extensions=${extensionPath},${samplersPath}"
